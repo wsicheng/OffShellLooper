@@ -288,28 +288,23 @@ std::tuple<vector<int>, vector<int>> getElectronIdxs() {
 
   for (unsigned i = 0; i < electrons_pt().size(); ++i) {
     // double const absEtaSc = fabs(electrons_etaSC()[i]);
+    double const pt = electrons_pt()[i] * electrons_scale_smear_corr()[i];
     double const absEtaSc = fabs(electrons_eta()[i]);
-    // bool const passLooseId = ((electrons_id_cutBased_Fall17V2_Loose_Bits()[i] & 895) == 895);
-    bool const passLooseId = ((electrons_id_cutBased_Fall17V2_Loose_Bits()[i] & 1023) == 1023);
+    bool const passLooseId = electrons_id_MVA_Fall17V2_NoIso_pass_wp90()[i];
+    bool passIso = (electrons_pfIso03_comb_nofsr()[i]/pt < 0.1);
 
-    float pt = electrons_pt()[i]* electrons_scale_smear_corr()[i];
-    if (pt < k_minPt_el_loose || absEtaSc > 2.5 || !passLooseId)
+    if (pt < k_minPt_el_loose || absEtaSc > 2.5 || !passLooseId || !passIso)
       continue;
-
-    // LorentzVector electron(electrons_pt()[i], electrons_eta()[i], electrons_phi()[i], electrons_mass()[i]);
-    // electron.charge = electrons_charge()[i];
-    // electron.etaSc = etaSc;
-
-    // if (IsDuplicate(electron.p4, 0.1)) continue;  // for jet cleaning
 
     looseElectrons.push_back(i);
 
-    bool const passTightId = ((electrons_id_cutBased_Fall17V2_Tight_Bits()[i] & 1023) == 1023);
+    // bool const passTightId = ((electrons_id_cutBased_Fall17V2_Medium_Bits()[i] & 0x37f) == 0x37f);
+    bool const passTightId = electrons_id_MVA_Fall17V2_NoIso_pass_wp90()[i];
 
     if (absEtaSc > 1.4442 and absEtaSc < 1.5660)  // EB-EE gap
       continue;
 
-    if (pt < k_minPt_lep2_tight or not passTightId)
+    if (pt < k_minPt_lep2_tight or not passTightId or not passIso)
       continue;
 
     tightElectrons.emplace_back(i);
@@ -358,24 +353,24 @@ std::tuple<vector<int>, vector<int>> getMuonIdxs(bool applyRocCorr, float* shift
   for (unsigned i = 0; i < muons_pt().size(); ++i) {
     // Loose ID as per https://twiki.cern.ch/twiki/bin/view/CMS/SWGuideMuonIdRun2#Loose_Muon
     // bool const passLooseId = muons_isPFcand()[i] && muons_isGlobal()[i] && muons_isTracker()[i];
+    double const pt = muons_pt()[i] * muons_scale_smear_pt_corr()[i];
     bool const passLooseId = (muons_POG_selector_bits()[i] & 1);
     // bool const passLooseIso = (muons_pfIso03_comb_nofsr()[i]/muons_pt()[i] > 0.1);
-    bool const passLooseIso = (muons_pfIso04_comb_nofsr()[i]/muons_pt()[i] > 0.25);
+    bool const passLooseIso = (muons_pfIso03_comb_nofsr()[i]/pt < 0.25);
     if (fabs(muons_eta()[i]) > 2.4 or not passLooseId or passLooseIso)
       continue;
 
     // LorentzVector muon(muons_pt()[i], muons_eta()[i], muons_phi()[i], muons_mass()[i]);
     // muon.charge = muons_charge()[i];
 
-    float pt = muons_pt()[i] * muons_scale_smear_pt_corr()[i];
     if (pt < k_minPt_mu_loose)  // minPtLoose
       continue;
 
     looseMuons.emplace_back(i);
 
     // bool const passTightId = muons_tightId()[i];
-    bool const passTightId = (muons_POG_selector_bits()[i] & (1UL << 3));
-    bool const passTightIso = (muons_pfIso04_comb_nofsr()[i]/pt > 0.15);
+    bool const passTightId = (muons_POG_selector_bits()[i] & (1UL << 2)); // mediumPromptID
+    bool const passTightIso = (muons_pfIso03_comb_nofsr()[i]/pt < 0.15);
 
     if (pt < k_minPt_lep2_tight or not passTightId or passTightIso) // minPtTight
       continue;

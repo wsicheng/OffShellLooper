@@ -51,8 +51,8 @@ using namespace tas;
 // turn on to apply json file to data
 const bool applyGoodRunList = true;
 
-const bool triggerPrescaleTest = false;
-const bool applySyncCuts = true;
+const bool triggerPrescaleTest = true;
+const bool applySyncCuts = false;
 
 int ScanChain(TChain *ch, string sample, string outdir, double sumwgts, string portion) {
 
@@ -167,7 +167,6 @@ int ScanChain(TChain *ch, string sample, string outdir, double sumwgts, string p
       // weight *= (xsection*1000 * gconf.lumi / sum_wgts);
 
       // if (event > 50000) break;
-
 
       // TODO:
       // if (gconf.is_data) {
@@ -316,6 +315,14 @@ int ScanChain(TChain *ch, string sample, string outdir, double sumwgts, string p
       if (isGamma) {
         plot1d("h_ptgamma_raw", photons_pt().at(0), weight, hvec, ";p_{T}(#gamma) [GeV]" , 40,  0, 800);
         plot1d("h_etagamma_raw", photons_eta().at(0), weight, hvec, ";#eta(#gamma) [GeV]" , 40,  -4.0f, 4.0f);
+        plot2d("h2d_ph_selected_eta_phi", photons_eta().at(photons.at(0)), photons_phi().at(photons.at(0)), weight, hvec, ";#eta(#gamma);#phi(#gamma)" , 50, -2.5f, 2.5f, 64, -3.2f, 3.2f);
+        for (int i = 0; i < photons_pt().size(); ++i) {
+          plot2d("h2d_photon_eta_phi", photons_eta().at(i), photons_phi().at(i), weight, hvec, ";#eta(#gamma);#phi(#gamma)" , 50, -2.5f, 2.5f, 64, -3.2f, 3.2f);
+        }
+      } else {
+        for (int i : looseElectrons) {
+          plot2d("h2d_elec_eta_phi", electrons_eta().at(i), electrons_phi().at(i), weight, hvec, ";#eta(e);#phi(e)" , 50, -2.5f, 2.5f, 64, -3.2f, 3.2f);
+        }
       }
 
       bool passLeptonVeto = true;
@@ -485,7 +492,6 @@ int ScanChain(TChain *ch, string sample, string outdir, double sumwgts, string p
         plot1d("h_met_step"+to_string(istep), pfmet_met_Nominal(), weight, hvec, ";E_{T}^{miss} [GeV]"  , 120,  0, 600);
       }
 
-
       float min_dphijZ = 4;
 
       LorentzVector p4_lljets = boson;
@@ -633,6 +639,47 @@ int ScanChain(TChain *ch, string sample, string outdir, double sumwgts, string p
       if (jets.size() >= 2) {
         fill_Zmet_hists(metsuf+"_geq2j");
         fill_Zmet_hists(metsuf+"_geq2j_"+lepcat);
+      }
+
+      for (const auto &j : jets) {
+        plot2d("h2d_jet_eta_phi_fullMET", ak4jets_eta().at(j), ak4jets_phi().at(j), weight, hvec, ";#eta(j);#phi(j)" , 100, -5.0f, 5.0f, 64, -3.2f, 3.2f);
+        plot2d("h2d_jet_eta_phi_"+metsuf, ak4jets_eta().at(j), ak4jets_phi().at(j), weight, hvec, ";#eta(j);#phi(j)" , 100, -5.0f, 5.0f, 64, -3.2f, 3.2f);
+        if ((ak4jets_eta().at(j) > -4.7 && ak4jets_eta().at(j) < -1.4) && (ak4jets_eta().at(j) > -1.6 && ak4jets_eta().at(j) < -0.8)) {
+          plot1d("h_met_inHEM_jet", met_p4.pt(), weight, hvec, ";E_{T}^{miss} [GeV]"  , 120,  0, 600);
+        } else if ((ak4jets_eta().at(j) < 4.7 && ak4jets_eta().at(j) > 1.4) && (ak4jets_eta().at(j) < 1.6 && ak4jets_eta().at(j) > 0.8)) {
+          plot1d("h_met_outHEM_jet", met_p4.pt(), weight, hvec, ";E_{T}^{miss} [GeV]"  , 120,  0, 600);
+        }
+      }
+      if (isGamma) {
+        for (int i : photons) {
+          plot2d("h2d_photon_eta_phi_fullMET", photons_eta().at(i), photons_phi().at(i), weight, hvec, ";#eta(#gamma);#phi(#gamma)" , 50, -2.5f, 2.5f, 64, -3.2f, 3.2f);
+          plot2d("h2d_photon_eta_phi_"+metsuf, photons_eta().at(i), photons_phi().at(i), weight, hvec, ";#eta(#gamma);#phi(#gamma)" , 50, -2.5f, 2.5f, 64, -3.2f, 3.2f);
+          if ((photons_eta().at(i) > -4.7 && photons_eta().at(i) < -1.4) && (photons_eta().at(i) > -1.6 && photons_eta().at(i) < -0.8)) {
+            plot1d("h_met_inHEM_ph", met_p4.pt(), weight, hvec, ";E_{T}^{miss} [GeV]"  , 120,  0, 600);
+          } else if ((photons_eta().at(i) < 4.7 && photons_eta().at(i) > 1.4) && (photons_eta().at(i) < 1.6 && photons_eta().at(i) > 0.8)) {
+            plot1d("h_met_outHEM_ph", met_p4.pt(), weight, hvec, ";E_{T}^{miss} [GeV]"  , 120,  0, 600);
+          }
+        }
+      } else if (isEE || isMuMu) {
+        for (int i = 0; i < photons_pt().size(); ++i) {
+          plot2d("h2d_photon_eta_phi_fullMET", photons_eta().at(i), photons_phi().at(i), weight, hvec, ";#eta(#gamma);#phi(#gamma)" , 50, -2.5f, 2.5f, 64, -3.2f, 3.2f);
+          plot2d("h2d_photon_eta_phi_"+metsuf, photons_eta().at(i), photons_phi().at(i), weight, hvec, ";#eta(#gamma);#phi(#gamma)" , 50, -2.5f, 2.5f, 64, -3.2f, 3.2f);
+          if ((photons_eta().at(i) > -4.7 && photons_eta().at(i) < -1.4) && (photons_eta().at(i) > -1.6 && photons_eta().at(i) < -0.8)) {
+            plot1d("h_met_inHEM_ph", met_p4.pt(), weight, hvec, ";E_{T}^{miss} [GeV]"  , 120,  0, 600);
+          } else if ((photons_eta().at(i) < 4.7 && photons_eta().at(i) > 1.4) && (photons_eta().at(i) < 1.6 && photons_eta().at(i) > 0.8)) {
+            plot1d("h_met_outHEM_ph", met_p4.pt(), weight, hvec, ";E_{T}^{miss} [GeV]"  , 120,  0, 600);
+          }
+        }
+      }
+
+      for (int i : looseElectrons) {
+        plot2d("h2d_elec_eta_phi_fullMET", electrons_eta().at(i), electrons_phi().at(i), weight, hvec, ";#eta(e);#phi(e)" , 50, -2.5f, 2.5f, 64, -3.2f, 3.2f);
+        plot2d("h2d_elec_eta_phi_"+metsuf, electrons_eta().at(i), electrons_phi().at(i), weight, hvec, ";#eta(e);#phi(e)" , 50, -2.5f, 2.5f, 64, -3.2f, 3.2f);
+        if ((electrons_eta().at(i) > -4.7 && electrons_eta().at(i) < -1.4) && (electrons_eta().at(i) > -1.6 && electrons_eta().at(i) < -0.8)) {
+          plot1d("h_met_inHEM_el", met_p4.pt(), weight, hvec, ";E_{T}^{miss} [GeV]"  , 120,  0, 600);
+        } else if ((electrons_eta().at(i) < 4.7 && electrons_eta().at(i) > 1.4) && (electrons_eta().at(i) < 1.6 && electrons_eta().at(i) > 0.8)) {
+          plot1d("h_met_outHEM_el", met_p4.pt(), weight, hvec, ";E_{T}^{miss} [GeV]"  , 120,  0, 600);
+        }
       }
 
       bool passMETMHTRatio = ((met_p4.pt() / p4_lljets.pt()) >= pow(85.f/p4_lljets.pt(), 1.5));
